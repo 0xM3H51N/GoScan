@@ -1,0 +1,10 @@
+# Build artifacts and OS files
+*.exe
+*.out
+*.test
+*.log
+/bin/
+/obj/
+vendor/
+*.swp
+.DS_Store
