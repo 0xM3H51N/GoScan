@@ -11,7 +11,7 @@ import (
 	"strings"
 )
 
-func checkDuPlicatesIPs(l []string) []string {
+func checkDuplicatesIPs(l []string) []string {
 
 	slices.Sort(l)
 	list := slices.Compact(l)
@@ -189,7 +189,7 @@ func IpParsing(ipSlice []string) ([]string, error) {
 		}
 	}
 
-	ipList := checkDuPlicatesIPs(fList)
+	ipList := checkDuplicatesIPs(fList)
 
 	return ipList, nil
 }
@@ -281,7 +281,7 @@ func ExtractIPsFromFile(file string) ([]string, error) {
 		return []string{}, fmt.Errorf("error reading from file: %w", err)
 	}
 
-	ipList := checkDuPlicatesIPs(list)
+	ipList := checkDuplicatesIPs(list)
 
 	return ipList, nil
 }
