@@ -1,8 +1,6 @@
 package scanner
 
 import (
-	"bufio"
-	"fmt"
 	"net"
 	"strconv"
 	"strings"
@@ -20,25 +18,21 @@ type Result struct {
 	Port   int
 	Status string
 	Banner string
-	err    error
-}
-
-type ErrorMessages struct {
-	TimeoutDuration    string
-	PortConnection     string
-	UnreachableHost    string
-	UnreachableNetwork string
 }
 
 func read(conn net.Conn) (string, error) {
-	reader := bufio.NewReader(conn)
-	banner, err := reader.ReadString('\n')
-
-	if err != nil {
-		return "", fmt.Errorf("error reader banner: %w", err)
+	var banner strings.Builder
+	for {
+		buf := make([]byte, 1024)
+		n, err := conn.Read(buf)
+		if n > 0 {
+			banner.Write(buf[:n])
+		}
+		if err != nil {
+			break
+		}
 	}
-
-	return banner, nil
+	return banner.String(), nil
 }
 
 func worker(jobs <-chan Info, result chan<- Result, timeout int, wg *sync.WaitGroup) {
@@ -48,16 +42,17 @@ func worker(jobs <-chan Info, result chan<- Result, timeout int, wg *sync.WaitGr
 		add := []string{job.IP, strconv.Itoa(job.Port)}
 		raddr := strings.Join(add, ":")
 
-		conn, err := net.DialTimeout("tcp", raddr, time.Duration(timeout))
+		conn, err := net.DialTimeout("tcp", raddr, time.Duration(timeout)*time.Second)
 		if err == nil {
+			conn.SetReadDeadline(time.Now().Add(time.Second * 2))
 			banner, err := read(conn)
 			if err != nil {
-				fmt.Errorf("could not grab banner: %v", err)
+				continue
 			}
 			result <- Result{IP: job.IP, Port: job.Port, Status: "open", Banner: banner}
 			conn.Close()
 		} else {
-			result <- Result{IP: job.IP, Port: job.Port, Status: "close", err: err}
+			result <- Result{IP: job.IP, Port: job.Port, Status: "close", Banner: ""}
 
 		}
 
@@ -67,30 +62,33 @@ func worker(jobs <-chan Info, result chan<- Result, timeout int, wg *sync.WaitGr
 func Scanner(IPs []string, ports []int, workers int, timeout int) ([]Result, error) {
 	var wg sync.WaitGroup
 
-	job := make(chan Info)
-	chResult := make(chan Result)
+	bufferSize := len(IPs) * len(ports)
+	job := make(chan Info, bufferSize)
+	chResult := make(chan Result, bufferSize)
 
 	for w := 0; w < workers; w++ {
 		wg.Add(1)
 		go worker(job, chResult, timeout, &wg)
 	}
 
-	for _, ip := range IPs {
-		for _, port := range ports {
-			job <- Info{IP: ip, Port: port}
+	go func() {
+		for _, ip := range IPs {
+			for _, port := range ports {
+				job <- Info{IP: ip, Port: port}
+			}
 		}
-	}
-	close(job)
+		close(job)
+	}()
 
-	total := (len(IPs) * len(ports))
+	go func() {
+		wg.Wait()
+		close(chResult)
+	}()
+
 	var result []Result
-	for i := 0; i < total; i++ {
-		res := <-chResult
-		result = append(result, res)
+	for r := range chResult {
+		result = append(result, r)
 	}
-	close(chResult)
-
-	wg.Wait()
 
 	return result, nil
 }

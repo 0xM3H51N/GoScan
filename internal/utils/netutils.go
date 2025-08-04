@@ -2,6 +2,7 @@ package utils
 
 import (
 	"bufio"
+	"errors"
 	"fmt"
 	"log"
 	"net"
@@ -12,7 +13,6 @@ import (
 )
 
 func checkDuplicatesIPs(l []string) []string {
-
 	slices.Sort(l)
 	list := slices.Compact(l)
 
@@ -24,7 +24,6 @@ func validateIP(ip string) error {
 	if parsedIP == nil {
 		return fmt.Errorf("invalid IP address")
 	}
-
 	return nil
 }
 
@@ -32,7 +31,7 @@ func validateRange(i int, s string) error {
 	switch {
 	case s == "port":
 		if i < 1 || i > 65535 {
-			return fmt.Errorf("port is not in range 1-65535")
+			return fmt.Errorf("port output of range 1-65535")
 		}
 		return nil
 	case s == "ip":
@@ -43,15 +42,6 @@ func validateRange(i int, s string) error {
 	default:
 		return fmt.Errorf("range validation error")
 	}
-
-}
-
-func IP2Int(ip net.IP) []int {
-	var intIP [4]int
-	for i, b := range ip {
-		intIP[i] = int(b)
-	}
-	return intIP[:]
 }
 
 func getIPsByCIDR(ip string) ([]string, error) {
@@ -69,22 +59,11 @@ func getIPsByCIDR(ip string) ([]string, error) {
 		broadcast[i] = IPv4[i] | ^mask[i]
 	}
 
-	ipCounts := make(net.IP, len(IPv4))
-	for i := 0; i < len(IPv4); i++ {
-		if IPv4[i] == 0 {
-			IPv4[i] = 1
-		}
-		ipCounts[i] = (broadcast[i] - IPv4[i]) + 1
-	}
-
-	baseIP := IP2Int(IPv4)
-	ipRng := IP2Int(ipCounts)
-
 	var list []string
-	for i := baseIP[0]; i < (baseIP[0] + ipRng[0]); i++ {
-		for j := baseIP[1]; j < (baseIP[1] + ipRng[1]); j++ {
-			for k := baseIP[2]; k < (baseIP[2] + ipRng[2]); k++ {
-				for l := baseIP[3]; l < (baseIP[3] + ipRng[3]); l++ {
+	for i := int(IPv4[0]); i <= int(broadcast[0]); i++ {
+		for j := int(IPv4[1]); j <= int(broadcast[1]); j++ {
+			for k := int(IPv4[2]); k <= int(broadcast[2]); k++ {
+				for l := int(IPv4[3]); l <= int(broadcast[3]); l++ {
 					c := []int{i, j, k, l}
 					var arr [4]string
 					for x, s := range c {
@@ -106,11 +85,17 @@ func getNumberOfIPs(ip []string) (int, []int, []int, error) {
 	for i, str := range ip {
 		if strings.Contains(str, "-") {
 			strSplited := strings.Split(str, "-")
+
 			start, err1 := strconv.Atoi(strSplited[0])
 			end, err2 := strconv.Atoi(strSplited[1])
 			if err1 != nil || err2 != nil {
-				return 0, nil, nil, fmt.Errorf("could convert IP range to int: %w, %w", err1, err2)
+				return 0, nil, nil, fmt.Errorf("could convert IP range to int: %w", errors.Join(err1, err2))
 			}
+
+			if end < start {
+				return 0, nil, nil, fmt.Errorf("IP range error")
+			}
+
 			ipCounts[i] = (end - start) + 1
 			startRng[i] = start
 		} else {
@@ -204,13 +189,17 @@ func getPortsRange(rng string) ([]int, error) {
 	lp, err2 := strconv.Atoi(lastPort)
 
 	if err1 != nil || err2 != nil {
-		return nil, fmt.Errorf("ports range input error: %w, %w", err1, err2)
+		return nil, (fmt.Errorf("ports range input error: %w", errors.Join(err1, err2)))
+	}
+
+	if fp > lp {
+		return nil, fmt.Errorf("ports range error")
 	}
 
 	err1 = validateRange(fp, "port")
 	err2 = validateRange(lp, "port")
 	if err1 != nil || err2 != nil {
-		return nil, fmt.Errorf("range input error: %w, %w", err1, err2)
+		return nil, fmt.Errorf("rang error: %w", errors.Join(err1, err2))
 	}
 
 	var ports []int
@@ -234,10 +223,12 @@ func PortsParsing(portSlice []string) ([]int, error) {
 		} else {
 			port, err := strconv.Atoi(p)
 			if err != nil {
+				fmt.Println("atoi")
 				continue
 			}
 			err = validateRange(port, "port")
 			if err != nil {
+				log.Printf("validate range error: %v/n", err)
 				continue
 			}
 			ports = append(ports, port)
@@ -245,7 +236,7 @@ func PortsParsing(portSlice []string) ([]int, error) {
 	}
 
 	if len(ports) == 0 {
-		return nil, fmt.Errorf("port input Error: check your input")
+		return nil, fmt.Errorf("port input error: check your input")
 	}
 
 	return ports, nil
@@ -254,7 +245,7 @@ func PortsParsing(portSlice []string) ([]int, error) {
 func ExtractIPsFromFile(file string) ([]string, error) {
 	fd, err := os.Open(file)
 	if err != nil {
-		return nil, fmt.Errorf("error openning file %s: %w", file, err)
+		return nil, err
 	}
 
 	defer fd.Close()
@@ -270,7 +261,7 @@ func ExtractIPsFromFile(file string) ([]string, error) {
 		line = strings.TrimSpace(line)
 		err := validateIP(line)
 		if err != nil {
-			log.Printf("Invalid IP skipped: %s, (%v)", line, err)
+			log.Printf("Invalid IP skipped: %s, (%v)/n", line, err)
 			continue
 		}
 
@@ -278,7 +269,7 @@ func ExtractIPsFromFile(file string) ([]string, error) {
 	}
 
 	if err := scanner.Err(); err != nil {
-		return []string{}, fmt.Errorf("error reading from file: %w", err)
+		return []string{}, err
 	}
 
 	ipList := checkDuplicatesIPs(list)
