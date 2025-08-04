@@ -153,6 +153,12 @@ This project uses [Semantic Versioning](https://semver.org/).
 You are currently viewing **v0.9.0**, an early development preview.
 
 ---
+## 🛠️ Craftsmanship
+
+GoScan was **entirely built from scratch** without AI code generation tools.  
+Every line of code, design decision, and feature was written manually to maximize learning, reinforce Go fundamentals, and demonstrate full ownership of the development process.
+
+---
 
 ## 🧑‍💻 Author
 
