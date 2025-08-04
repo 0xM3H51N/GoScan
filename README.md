@@ -4,10 +4,9 @@
 
 # GoScan · 📡🔍
 
-[![Go](https://img.shields.io/badge/Go-1.21+-00ADD8?logo=go)](https://golang.org)
+[![Go](https://img.shields.io/badge/Go-1.24.2-00ADD8?logo=go)](https://golang.org)
 [![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](LICENSE)
-[![Build](https://img.shields.io/badge/build-passing-brightgreen)]()
-[![Version](https://img.shields.io/badge/version-v0.1.0-yellowgreen)]()
+[![Version](https://img.shields.io/badge/version-v0.9.0-yellowgreen)]()
 
 A fast and minimal TCP port scanner built in Go. Supports CIDR/IP ranges, port ranges, concurrency, banner grabbing, and structured output.
 
