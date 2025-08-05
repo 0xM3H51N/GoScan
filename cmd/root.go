@@ -153,8 +153,8 @@ func init() {
 	rootCmd.Flags().Int("timeout", 5,
 		"Connection timeout in seconds.")
 
-	rootCmd.Flags().StringP("format", "x", "plaintext",
-		"Output format: JSON or PLAINTEXT (default: PLAINTEXT)")
+	rootCmd.Flags().StringP("format", "x", "text",
+		"Output format: JSON or TEXT (default: TEXT)")
 
 	rootCmd.Flags().StringP("output", "o", "",
 		"Save scan results to a file. If not set, output is printed to the terminal")

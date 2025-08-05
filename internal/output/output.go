@@ -40,7 +40,7 @@ func formatAsJson(results map[string][]PortResult, fileName string) error {
 	return nil
 }
 
-func formatAsPlain(results map[string][]scanner.Result, fileName string) error {
+func formatAsText(results map[string][]scanner.Result, fileName string) error {
 
 	if fileName == "" {
 		for ip, r := range results {
@@ -87,12 +87,12 @@ func WriteOutput(res []scanner.Result, fileName string, format string) error {
 		if err != nil {
 			return err
 		}
-	case "plaintext":
+	case "text":
 		results := make(map[string][]scanner.Result)
 		for _, r := range res {
 			results[r.IP] = append(results[r.IP], r)
 		}
-		err := formatAsPlain(results, fileName)
+		err := formatAsText(results, fileName)
 		if err != nil {
 			return err
 		}
